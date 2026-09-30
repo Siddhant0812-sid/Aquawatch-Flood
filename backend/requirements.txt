@@ -1,21 +1,17 @@
-# AquaWatch Flood — Dependencies
-# Core
+# AquaWatch backend dependencies
 fastapi>=0.104.0
 uvicorn>=0.24.0
 python-dotenv>=1.0.0
 
-# Data & ML (Member 2 — Forecasting)
+# Forecasting and data adapters
 torch>=2.0.0
 pandas>=2.0.0
 numpy>=1.24.0
 scikit-learn>=1.3.0
 statsmodels>=0.14.0
 matplotlib>=3.7.0
+pmdarima>=2.0.0
 
-# Optional
-pmdarima>=2.0.0           # auto ARIMA order selection
-
-# Segmentation (Member 1 — U-Net inference)
+# Segmentation adapters
 segmentation-models-pytorch>=0.3.0
 rasterio>=1.3.0
-

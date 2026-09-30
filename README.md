@@ -19,8 +19,10 @@ forecasting adapters can be added later without changing the frontend.
 
 ```text
 AquaWatch Flood/
-├── main.py                  # Complete FastAPI backend and mock API
-├── tests/test_api.py        # Focused backend API tests
+├── backend/
+│   ├── main.py              # Complete FastAPI backend and mock API
+│   ├── requirements.txt     # Backend Python dependencies
+│   └── tests/test_api.py    # Focused backend API tests
 ├── frontend/
 │   ├── src/
 │   │   ├── App.tsx          # Routes and application shell
@@ -38,14 +40,18 @@ AquaWatch Flood/
 - Python 3.10 or newer
 - Node.js 18 or newer and npm
 
-The backend dependencies are listed in [requirements.txt](requirements.txt).
+The backend dependencies are listed in [backend/requirements.txt](backend/requirements.txt).
 The frontend dependencies are listed in [frontend/package.json](frontend/package.json).
 
 ## Run the backend
 
-From the repository root on Windows:
+From the repository root on Windows, create and activate a virtual environment
+(recommended), then install the backend dependencies:
 
 ```powershell
+cd backend
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
 python -m pip install -r requirements.txt
 python -m uvicorn main:app --reload --host 127.0.0.1 --port 8000
 ```
@@ -54,8 +60,14 @@ Alternatively, double-click [run_app.bat](run_app.bat). The API is available
 at `http://127.0.0.1:8000`.
 
 The backend is intentionally contained in the single
-[main.py](main.py) entrypoint. It serves the API and, when a production
-frontend build exists, can also serve `frontend/dist`.
+[backend/main.py](backend/main.py) entrypoint. It serves the API and, when a
+production frontend build exists, can also serve `frontend/dist`.
+
+The virtual environment is not technically mandatory, but it is strongly
+recommended. It keeps FastAPI, Uvicorn, PyTorch, and the other project
+packages isolated from other Python projects. If you do not want to use one,
+run `python -m pip install -r backend/requirements.txt` from the repository
+root instead.
 
 ## Run the frontend
 
@@ -102,9 +114,10 @@ JSON errors with `error` and `detail` fields.
 
 ## Run tests
 
-From the repository root:
+From the backend directory:
 
 ```powershell
+cd backend
 python -m pytest tests/test_api.py -q
 ```
 

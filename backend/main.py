@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 from datetime import datetime, timedelta
 
 from fastapi import FastAPI, HTTPException
@@ -8,7 +9,8 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from dotenv import load_dotenv
 
-load_dotenv()
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+load_dotenv(PROJECT_ROOT / ".env")
 
 USE_MOCK_DATA = os.getenv("USE_MOCK_DATA", "True").lower() in ("true", "1", "yes")
 USE_MOCK_MODELS = os.getenv("USE_MOCK_MODELS", "True").lower() in ("true", "1", "yes")
@@ -204,8 +206,9 @@ def simulate_alert(req: AlertRequest):
     return {"triggered": triggered, "message": message}
 
 
-if os.path.exists("frontend/dist"):
-    app.mount("/", StaticFiles(directory="frontend/dist", html=True), name="static")
+FRONTEND_DIST = PROJECT_ROOT / "frontend" / "dist"
+if FRONTEND_DIST.exists():
+    app.mount("/", StaticFiles(directory=FRONTEND_DIST, html=True), name="static")
 
 
 if __name__ == "__main__":
