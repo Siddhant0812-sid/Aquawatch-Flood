@@ -1,96 +1,135 @@
-# AquaWatch — Member 2: Rainfall & Water-Level Forecasting
+# AquaWatch Flood
 
-## File Map
+AquaWatch is a local demo dashboard for flood awareness in Assam and the
+Brahmaputra basin. It combines a FastAPI backend with a React, Leaflet, and
+Recharts frontend to display:
 
-```
-aquawatch_member2/
-├── data_pipeline.py        ← Stage 1: load/clean/merge data
-├── feature_engineering.py  ← Stage 2: rolling windows, lags, labels
-├── baseline_arima.py       ← Stage 3: ARIMA baseline
-├── model_lstm.py           ← Stage 4: LSTM (primary model)
-├── model_tft.py            ← Stage 5: TFT-Lite (comparison model)
-├── explainability.py       ← Stage 6: attention viz, feature importance, backtest
-├── api.py                  ← Stage 7: FastAPI endpoints for dashboard
-└── run_all.py              ← Master script: runs everything
-```
+- deterministic mock flood extent on a map;
+- five Brahmaputra monitoring stations and their risk levels;
+- 24-hour, 48-hour, and 72-hour water-level forecasts;
+- forecast contributing factors and danger-level reference lines; and
+- a clearly labelled simulated alert action.
 
-## Quick Start
+The application is intentionally mock-first. It does not require Earth Engine
+credentials, a database, cloud deployment, or external model files to run the
+demo. The API response contracts are stable so real segmentation and
+forecasting adapters can be added later without changing the frontend.
 
-```bash
-pip install torch pandas numpy scikit-learn statsmodels fastapi uvicorn matplotlib
-# optional but recommended:
-pip install pmdarima   # for auto ARIMA order selection
+## Project structure
 
-python run_all.py      # runs full pipeline with synthetic data
-```
-
-## Swapping in Real NWDP Data
-
-Search all files for `# REAL DATA SWAP` — there are exactly 2 swap points:
-
-**`data_pipeline.py` → `generate_synthetic_water_level()`:**
-```python
-df = pd.read_csv("data/raw/water_level_assam.csv",
-                 parse_dates=["datetime"], index_col="datetime")
-df = df[STATIONS["water_level"]]
-df = df.asfreq("1H")
-return df
+```text
+AquaWatch Flood/
+├── main.py                  # Complete FastAPI backend and mock API
+├── tests/test_api.py        # Focused backend API tests
+├── frontend/
+│   ├── src/
+│   │   ├── App.tsx          # Routes and application shell
+│   │   ├── pages/           # Dashboard, station detail, and About views
+│   │   └── api/client.ts    # Typed API client
+│   └── package.json
+├── data/                    # Local raw and processed inputs
+├── models/                  # Forecasting and segmentation modules
+├── .env.example             # Local configuration template
+└── run_app.bat              # Windows backend launcher
 ```
 
-**`data_pipeline.py` → `generate_synthetic_rainfall()`:**
-```python
-df = pd.read_csv("data/raw/rainfall_cwc_assam.csv",
-                 parse_dates=["datetime"], index_col="datetime")
-df = df[STATIONS["rainfall"]]
-df = df.asfreq("1H").fillna(0)
-return df
+## Requirements
+
+- Python 3.10 or newer
+- Node.js 18 or newer and npm
+
+The backend dependencies are listed in [requirements.txt](requirements.txt).
+The frontend dependencies are listed in [frontend/package.json](frontend/package.json).
+
+## Run the backend
+
+From the repository root on Windows:
+
+```powershell
+python -m pip install -r requirements.txt
+python -m uvicorn main:app --reload --host 127.0.0.1 --port 8000
 ```
 
-Your CSV must have:
-- Column `datetime` as the index (hourly)  
-- One column per station (name must match `STATIONS` dict)
+Alternatively, double-click [run_app.bat](run_app.bat). The API is available
+at `http://127.0.0.1:8000`.
 
-## What Each Stage Produces
+The backend is intentionally contained in the single
+[main.py](main.py) entrypoint. It serves the API and, when a production
+frontend build exists, can also serve `frontend/dist`.
 
-| Stage | Output |
-|---|---|
-| data_pipeline | `data/processed/water_level_clean.csv`, `rainfall_clean.csv`, `merged_hourly.csv` |
-| feature_engineering | `data/processed/features.csv` |
-| baseline_arima | `outputs/arima/arima_metrics.csv`, per-station prediction CSVs |
-| model_lstm | `models/lstm_best.pt`, `outputs/lstm/lstm_metrics.csv`, prediction CSVs |
-| model_tft | `models/tft_best.pt`, `outputs/tft/tft_metrics.csv`, prediction CSVs |
-| explainability | `outputs/explainability/model_comparison.png`, attention plots, backtest plot |
-| api | FastAPI service on port 8001 |
+## Run the frontend
 
-## API for Member 3 (Dashboard)
+Install frontend dependencies and start the frontend:
 
-```
-GET  /health            → health check
-GET  /stations          → current risk level for all 5 stations
-POST /forecast          → 24h/48h/72h prediction for one station
-GET  /risk              → compact risk summary (for alert banner)
-GET  /history/{station} → last 7 days timeseries (for charts)
+```powershell
+cd frontend
+npm install
+npm run dev
 ```
 
-Start the API:
-```bash
-uvicorn api:app --reload --port 8001
+Open `http://127.0.0.1:5173` in a browser. The Vite proxy sends `/api/*`
+requests to the backend at `http://127.0.0.1:8000`. The supported frontend
+workflow is `npm install` followed by `npm run dev`.
+
+To create a production frontend build:
+
+```powershell
+npm run build
 ```
 
-Example request:
-```bash
-curl -X POST http://localhost:8001/forecast \
-  -H "Content-Type: application/json" \
-  -d '{"station": "Guwahati", "horizon_hours": [24, 48, 72]}'
+## API endpoints
+
+| Method | Endpoint | Purpose |
+| --- | --- | --- |
+| `GET` | `/health` | Backend readiness check |
+| `GET` | `/stations` | Five station summaries and current risk labels |
+| `GET` | `/segment?date=YYYY-MM-DD` | Mock GeoJSON flood overlay and acquisition date |
+| `GET` | `/forecast?station_id=guwahati` | Current level and 24/48/72-hour forecast |
+| `POST` | `/simulate-alert` | Demo alert action for a station and risk score |
+
+Example requests:
+
+```powershell
+curl.exe http://127.0.0.1:8000/health
+curl.exe "http://127.0.0.1:8000/forecast?station_id=guwahati"
+curl.exe -X POST http://127.0.0.1:8000/simulate-alert `
+  -H "Content-Type: application/json" `
+  -d '{"station_id":"guwahati","risk_score":0.8}'
 ```
 
-## Evaluation Targets (from project spec)
+Invalid dates, unknown stations, and out-of-range risk scores return explicit
+JSON errors with `error` and `detail` fields.
 
-| Metric | Target |
-|---|---|
-| RMSE (24h) | < ARIMA baseline |
-| RMSE (48h) | < ARIMA baseline |
-| RMSE (72h) | < ARIMA baseline |
-| Backtest | Flags elevated risk ahead of known 2022 Assam flood |
+## Run tests
 
-Results are printed by `run_all.py` and saved to `outputs/explainability/model_comparison.csv`.
+From the repository root:
+
+```powershell
+python -m pytest tests/test_api.py -q
+```
+
+From `frontend/`:
+
+```powershell
+npm run build
+npm run lint
+```
+
+## Configuration and limitations
+
+Copy [.env.example](.env.example) to `.env` when local overrides are needed.
+The default configuration enables mock data and mock models.
+
+This is a local demonstration system:
+
+- mock data is deterministic and held in memory;
+- Sentinel-1 imagery is represented by a mock overlay and is not real-time;
+- the displayed imagery acquisition date may differ from the selected date;
+- simulated alerts do not send SMS, email, or push notifications;
+- there is no authentication, database, or cloud deployment layer; and
+- model artifacts and real telemetry can be integrated later behind the same
+  API contracts.
+
+See [BACKEND_SCHEMA.md](BACKEND_SCHEMA.md),
+[APP_FLOW.md](APP_FLOW.md), [TRD.md](TRD.md), and
+[UI_UX_DESIGN.md](UI_UX_DESIGN.md) for the detailed requirements baseline.
