@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { CircleMarker, GeoJSON, MapContainer, Popup, TileLayer } from 'react-leaflet'
 import { useNavigate } from 'react-router-dom'
 import { fetchSegment, fetchStations } from '../api/client'
@@ -30,10 +30,12 @@ export default function DashboardPage() {
   const [selectedDate, setSelectedDate] = useState(today)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [refreshing, setRefreshing] = useState(false)
 
-  useEffect(() => {
+  const loadDashboard = useCallback(() => {
     let active = true
     setLoading(true)
+    setRefreshing(true)
     setError(null)
     Promise.all([fetchStations(), fetchSegment(selectedDate)])
       .then(([stationResponse, segmentResponse]) => {
@@ -45,12 +47,19 @@ export default function DashboardPage() {
         if (active) setError(reason instanceof Error ? reason.message : 'Unable to load dashboard')
       })
       .finally(() => {
-        if (active) setLoading(false)
+        if (active) {
+          setLoading(false)
+          setRefreshing(false)
+        }
       })
     return () => {
       active = false
     }
   }, [selectedDate])
+
+  useEffect(() => {
+    loadDashboard()
+  }, [loadDashboard])
 
   if (loading) return <div className="loading">Loading dashboard…</div>
   if (error) return <div className="error-state">Failed to load dashboard: {error}</div>
@@ -63,6 +72,9 @@ export default function DashboardPage() {
           <label htmlFor="segment-date">Imagery date</label>
           <input id="segment-date" type="date" value={selectedDate} onChange={(event) => setSelectedDate(event.target.value)} />
           {segment && <span className="imagery-note">Acquisition: {segment.imagery_acquisition_date} · Coverage: {segment.coverage_pct}% · Sentinel-1 revisit is approximately 6–12 days</span>}
+          <button className="btn btn-secondary" type="button" onClick={loadDashboard} disabled={refreshing}>
+            {refreshing ? 'Refreshing…' : 'Refresh'}
+          </button>
         </div>
         <div className="map-container">
           <MapContainer center={ASSAM_CENTER} zoom={7} scrollWheelZoom>
@@ -82,7 +94,16 @@ export default function DashboardPage() {
           <h2>Monitoring stations</h2>
           <ul className="station-list">
             {stations.map((station) => (
-              <li key={station.station_id} className="station-item" onClick={() => navigate(`/station/${station.station_id}`)}>
+              <li
+                key={station.station_id}
+                className="station-item"
+                onClick={() => navigate(`/station/${station.station_id}`)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') navigate(`/station/${station.station_id}`)
+                }}
+                role="button"
+                tabIndex={0}
+              >
                 <div><h3>{station.name}</h3><p>{station.river}</p></div>
                 <span className={`risk-badge ${station.current_risk_level.toLowerCase()}`}><span className="dot" />{station.current_risk_level}</span>
               </li>

@@ -73,3 +73,7 @@ export function simulateAlert(stationId: string, riskScore: number): Promise<Ale
     body: JSON.stringify({ station_id: stationId, risk_score: riskScore }),
   })
 }
+
+export function fetchHealth(): Promise<{ status: string }> {
+  return request('/health')
+}

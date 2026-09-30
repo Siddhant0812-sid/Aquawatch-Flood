@@ -11,7 +11,9 @@ function App() {
         <div>
           <p className="eyebrow">Brahmaputra Basin</p>
           <h1>AquaWatch Flood Dashboard</h1>
+          <p className="app-subtitle">Mock-data situational awareness for Assam flood risk</p>
         </div>
+        <span className="mode-badge">Demo mode</span>
       </header>
 
       <nav className="main-nav" aria-label="Main navigation">
