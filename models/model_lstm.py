@@ -205,7 +205,13 @@ def train_lstm(splits: Dict,
             best_val_loss = va_loss
             best_epoch    = epoch
             patience_ctr  = 0
-            torch.save(model.state_dict(), MODELS_DIR / "lstm_best.pt")
+            pt_target = MODELS_DIR / "lstm_best.pt"
+            if pt_target.exists():
+                try:
+                    pt_target.unlink()
+                except Exception:
+                    pass
+            torch.save(model.state_dict(), pt_target)
         else:
             patience_ctr += 1
             if patience_ctr >= patience:
@@ -257,7 +263,7 @@ def evaluate_lstm(model: FloodLSTM,
     for i, h in enumerate(HORIZONS):
         rmse = float(np.sqrt(np.mean((y_true[:, i] - preds[:, i]) ** 2)))
         mae  = float(np.mean(np.abs(y_true[:, i]  - preds[:, i])))
-        print(f"  {h}h → RMSE={rmse:.4f}  MAE={mae:.4f}")
+        print(f"  {h}h -> RMSE={rmse:.4f}  MAE={mae:.4f}")
         records.append({"horizon_h": h, "RMSE": rmse, "MAE": mae, "model": "LSTM"})
 
         # Save predictions for dashboard / backtest

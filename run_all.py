@@ -17,10 +17,9 @@ Stages:
 Tip: to skip a stage, set its flag to False below.
 """
 
-import torch
-import numpy as np
-import json
-from sklearn.preprocessing import MinMaxScaler
+import os
+import sys
+from pathlib import Path
 
 RUN_ARIMA = True
 RUN_LSTM  = True
@@ -38,8 +37,21 @@ FLOOD_THRESHOLDS = {
     "NH17 Crossing Boko":             4.0,
 }
 
+PROJECT_ROOT = Path(__file__).resolve().parent
+MODELS_DIR = PROJECT_ROOT / "models"
+if str(MODELS_DIR) not in sys.path:
+    sys.path.insert(0, str(MODELS_DIR))
+
 
 def main():
+    # Model modules use project-relative data/output paths.  Normalize the
+    # working directory so this script behaves the same from root or backend.
+    os.chdir(PROJECT_ROOT)
+    # Keep importing the launcher lightweight; these are only needed by
+    # training/explainability stages and are not required to discover paths.
+    import numpy as np
+    import torch
+    from sklearn.preprocessing import MinMaxScaler
     print("  AquaWatch Full Pipeline")
 
     # ── 1. Data ──────────────────────────────────────────────────

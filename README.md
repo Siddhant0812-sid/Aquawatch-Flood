@@ -4,7 +4,7 @@ AquaWatch is a local demo dashboard for flood awareness in Assam and the
 Brahmaputra basin. It combines a FastAPI backend with a React, Leaflet, and
 Recharts frontend to display:
 
-- deterministic mock flood extent on a map;
+- flood extent on a map (real U-Net inference when configured, otherwise deterministic demo data);
 - five Brahmaputra monitoring stations and their risk levels;
 - 24-hour, 48-hour, and 72-hour water-level forecasts;
 - forecast contributing factors and danger-level reference lines; and
@@ -12,8 +12,11 @@ Recharts frontend to display:
 
 The application is intentionally mock-first. It does not require Earth Engine
 credentials, a database, cloud deployment, or external model files to run the
-demo. The API response contracts are stable so real segmentation and
-forecasting adapters can be added later without changing the frontend.
+demo. The API response contracts remain stable when model adapters are used.
+When `USE_MOCK_MODELS=false`, the backend lazily attempts to use compatible
+artifacts under `models/` and a scene selected by `SEGMENT_INPUT_PATH`.
+Missing or incompatible artifacts are logged and use deterministic demo data;
+models are never trained during backend startup.
 
 ## Project structure
 
@@ -95,7 +98,7 @@ npm run build
 | --- | --- | --- |
 | `GET` | `/health` | Backend readiness check |
 | `GET` | `/stations` | Five station summaries and current risk labels |
-| `GET` | `/segment?date=YYYY-MM-DD` | Mock GeoJSON flood overlay and acquisition date |
+| `GET` | `/segment?date=YYYY-MM-DD` | U-Net GeoJSON overlay when configured, otherwise demo overlay |
 | `GET` | `/forecast?station_id=guwahati` | Current level and 24/48/72-hour forecast |
 | `POST` | `/simulate-alert` | Demo alert action for a station and risk score |
 
@@ -140,8 +143,27 @@ This is a local demonstration system:
 - the displayed imagery acquisition date may differ from the selected date;
 - simulated alerts do not send SMS, email, or push notifications;
 - there is no authentication, database, or cloud deployment layer; and
-- model artifacts and real telemetry can be integrated later behind the same
-  API contracts.
+- Member 1's U-Net checkpoint is loaded only when `USE_MOCK_MODELS=false` and
+  `SEGMENT_INPUT_PATH` points to a two-band `.tif`/`.tiff`/`.npy` scene;
+- Member 2's training pipeline is available through `run_all.py`, but training
+  is an explicit offline step and never runs as part of API startup; and
+- the current dashboard station IDs are different from Member 2's training
+  station names, so forecast requests use the stable demo adapter until a
+  station mapping and inference metadata are produced.
+
+## Run the Member 2 training pipeline
+
+Training is intentionally separate from server startup. From the repository
+root:
+
+```powershell
+python run_all.py
+```
+
+The script writes processed data, checkpoints, metrics, and explainability
+outputs under `data/processed/`, `models/`, and `outputs/`. It can be run from
+any directory because it normalizes paths to the repository root. After
+training, restart the backend so it can discover compatible artifacts.
 
 See [BACKEND_SCHEMA.md](BACKEND_SCHEMA.md),
 [APP_FLOW.md](APP_FLOW.md), [TRD.md](TRD.md), and

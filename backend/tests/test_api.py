@@ -1,6 +1,9 @@
 from fastapi.testclient import TestClient
 
-from main import app
+try:
+    from backend.main import app
+except ModuleNotFoundError:
+    from main import app
 
 client = TestClient(app)
 
@@ -36,6 +39,14 @@ def test_segment_and_error_shapes():
     invalid = client.get('/segment?date=invalid')
     assert invalid.status_code == 400
     assert invalid.json()['error'] == 'invalid_date'
+
+
+def test_model_service_is_deterministic_in_mock_mode():
+    first = client.get('/segment?date=2026-07-30').json()
+    second = client.get('/segment?date=2026-07-30').json()
+    assert first == second
+    forecast = client.get('/forecast?station_id=guwahati').json()
+    assert [p['horizon_hours'] for p in forecast['forecasts']] == [24, 48, 72]
 
 
 def test_alert_validation():

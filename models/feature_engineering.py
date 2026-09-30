@@ -209,7 +209,7 @@ def train_val_test_split(
     }
     for k, (Xs, ys) in splits.items():
         print(f"[split] {k:5s}: {len(Xs):,} rows "
-              f"({Xs.index.min().date()} → {Xs.index.max().date()})")
+              f"({Xs.index.min().date()} to {Xs.index.max().date()})")
     return splits
 
 

@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -8,6 +8,10 @@ from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from dotenv import load_dotenv
+try:
+    from .model_service import ModelService
+except ImportError:  # supports `uvicorn main:app` from backend/
+    from model_service import ModelService
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 load_dotenv(PROJECT_ROOT / ".env")
@@ -32,6 +36,7 @@ STATIONS = [
     {"station_id": "guwahati", "name": "Guwahati", "river": "Brahmaputra", "lat": 26.1445, "lon": 91.7362, "danger_level_m": 49.5},
     {"station_id": "dhubri", "name": "Dhubri", "river": "Brahmaputra", "lat": 26.0220, "lon": 89.9870, "danger_level_m": 28.5},
 ]
+MODEL_SERVICE = ModelService(PROJECT_ROOT, STATIONS, USE_MOCK_MODELS)
 
 
 def get_risk_label(score: float) -> str:
@@ -87,47 +92,7 @@ def get_segment(date: str):
             detail={"error": "invalid_date", "detail": "Invalid date format, use YYYY-MM-DD"},
         ) from exc
 
-    base_dt = datetime(2026, 1, 1)
-    delta_days = (dt - base_dt).days
-    acq_days = delta_days - (delta_days % 6)
-    acq_dt = base_dt + timedelta(days=acq_days)
-
-    mask_geojson = {
-        "type": "FeatureCollection",
-        "features": [
-            {
-                "type": "Feature",
-                "geometry": {
-                    "type": "Polygon",
-                    "coordinates": [[[94.90, 27.45], [94.95, 27.45], [94.95, 27.50], [94.90, 27.50], [94.90, 27.45]]],
-                },
-                "properties": {"location": "Near Dibrugarh", "type": "flood_water"},
-            },
-            {
-                "type": "Feature",
-                "geometry": {
-                    "type": "Polygon",
-                    "coordinates": [[[91.70, 26.10], [91.75, 26.10], [91.75, 26.15], [91.70, 26.15], [91.70, 26.10]]],
-                },
-                "properties": {"location": "Near Guwahati", "type": "flood_water"},
-            },
-            {
-                "type": "Feature",
-                "geometry": {
-                    "type": "Polygon",
-                    "coordinates": [[[92.75, 26.60], [92.85, 26.60], [92.85, 26.65], [92.75, 26.65], [92.75, 26.60]]],
-                },
-                "properties": {"location": "Near Tezpur", "type": "flood_water"},
-            },
-        ],
-    }
-
-    return {
-        "date": date,
-        "mask_geojson": mask_geojson,
-        "coverage_pct": round(12.5 + (delta_days % 5) * 1.5, 2),
-        "imagery_acquisition_date": acq_dt.strftime("%Y-%m-%d"),
-    }
+    return MODEL_SERVICE.segment(date)
 
 
 @app.get("/forecast")
@@ -139,40 +104,7 @@ def get_forecast(station_id: str):
             detail={"error": "not_found", "detail": f"Station {station_id} not found"},
         )
 
-    danger = station["danger_level_m"]
-    current = danger - 1.5 + (len(station_id) * 0.1)
-
-    forecasts = [
-        {
-            "horizon_hours": 24,
-            "predicted_level_m": round(current + 0.3, 2),
-            "risk_score": 0.65,
-            "risk_label": get_risk_label(0.65),
-            "top_factors": ["rainfall_72h", "upstream_level"],
-        },
-        {
-            "horizon_hours": 48,
-            "predicted_level_m": round(current + 0.8, 2),
-            "risk_score": 0.72,
-            "risk_label": get_risk_label(0.72),
-            "top_factors": ["rainfall_72h", "rate_of_rise"],
-        },
-        {
-            "horizon_hours": 72,
-            "predicted_level_m": round(current + 0.5, 2),
-            "risk_score": 0.68,
-            "risk_label": get_risk_label(0.68),
-            "top_factors": ["rainfall_72h", "seasonal_trend"],
-        },
-    ]
-
-    return {
-        "station_id": station_id,
-        "station_name": station["name"],
-        "current_level_m": round(current, 2),
-        "danger_level_m": danger,
-        "forecasts": forecasts,
-    }
+    return MODEL_SERVICE.forecast(station)
 
 
 class AlertRequest(BaseModel):

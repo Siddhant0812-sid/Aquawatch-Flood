@@ -16,6 +16,8 @@ import pandas as pd
 from pathlib import Path
 from datetime import datetime, timedelta
 
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+
 # ── Config ──────────────────────────────────────────────────────────────────
 STATIONS = {
     "water_level": [
@@ -42,8 +44,9 @@ def _make_index(start=START_DATE, end=END_DATE, freq=FREQ):
 
 
 def generate_synthetic_water_level() -> pd.DataFrame:
-    df = pd.read_csv("data_raw_water_level_assam.csv",
-                     parse_dates=["Data Acquisition Time"])
+    df = pd.read_csv(PROJECT_ROOT / "data" / "raw_water_level_assam.csv",
+                     parse_dates=["Data Acquisition Time"],
+                     date_format={"Data Acquisition Time": "%d-%m-%Y %H:%M"})
     df_wide = df.pivot_table(
         index="Data Acquisition Time",
         columns="Station",
@@ -203,7 +206,7 @@ def build_merged_dataset(wl_df: pd.DataFrame,
                          f"check your CSV date range and station coverage.")
 
     print(f"\n[merged] Shape: {merged.shape} | "
-          f"Range: {merged.index.min()} → {merged.index.max()}")
+          f"Range: {merged.index.min()} to {merged.index.max()}")
     return merged
 
 
