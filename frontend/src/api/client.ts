@@ -55,6 +55,36 @@ export interface AlertResponse {
   message: string
 }
 
+export interface ModelMetric {
+  model: string
+  horizon_h: number
+  mae: number
+  rmse: number
+}
+
+export interface SegmentationSpecs {
+  model: string
+  backbone: string
+  input_channels: number
+  bands: string[]
+  resolution_m: number
+  window_size: number
+  stride: number
+  threshold: number
+  target: string
+}
+
+export interface EvaluationSummaryResponse {
+  metrics: ModelMetric[]
+  segmentation: SegmentationSpecs
+  artifacts: {
+    model_comparison_plot: string
+    attention_lstm_plot: string
+    attention_tft_plot: string
+    backtest_plot: string
+  }
+}
+
 export function fetchStations(): Promise<{ stations: StationSummary[] }> {
   return request('/stations')
 }
@@ -76,4 +106,8 @@ export function simulateAlert(stationId: string, riskScore: number): Promise<Ale
 
 export function fetchHealth(): Promise<{ status: string }> {
   return request('/health')
+}
+
+export function fetchEvaluationSummary(): Promise<EvaluationSummaryResponse> {
+  return request('/evaluation-summary')
 }

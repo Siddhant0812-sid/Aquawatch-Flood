@@ -138,6 +138,51 @@ def simulate_alert(req: AlertRequest):
     return {"triggered": triggered, "message": message}
 
 
+@app.get("/evaluation-summary")
+def get_evaluation_summary():
+    comparison_file = PROJECT_ROOT / "outputs" / "explainability" / "model_comparison.csv"
+    metrics = []
+    if comparison_file.exists():
+        import csv
+        with open(comparison_file, mode="r", encoding="utf-8") as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                try:
+                    metrics.append({
+                        "model": row.get("model", ""),
+                        "horizon_h": int(row.get("horizon_h", 0)),
+                        "mae": round(float(row.get("MAE", 0.0)), 4),
+                        "rmse": round(float(row.get("RMSE", 0.0)), 4),
+                    })
+                except (ValueError, TypeError):
+                    continue
+
+    return {
+        "metrics": metrics,
+        "segmentation": {
+            "model": "ResNet-34 U-Net",
+            "backbone": "ResNet34 (ImageNet pretrained encoder)",
+            "input_channels": 2,
+            "bands": ["VV", "VH (Sentinel-1 SAR)"],
+            "resolution_m": 10.0,
+            "window_size": 256,
+            "stride": 64,
+            "threshold": 0.50,
+            "target": "Binary surface water / flood extent"
+        },
+        "artifacts": {
+            "model_comparison_plot": "/outputs/explainability/model_comparison.png",
+            "attention_lstm_plot": "/outputs/explainability/attention_lstm.png",
+            "attention_tft_plot": "/outputs/explainability/attention_tft-lite.png",
+            "backtest_plot": "/outputs/explainability/backtest_NH15 Crossing Dhansirighat_2022.png",
+        }
+    }
+
+
+OUTPUTS_DIR = PROJECT_ROOT / "outputs"
+if OUTPUTS_DIR.exists():
+    app.mount("/outputs", StaticFiles(directory=OUTPUTS_DIR), name="outputs")
+
 FRONTEND_DIST = PROJECT_ROOT / "frontend" / "dist"
 if FRONTEND_DIST.exists():
     app.mount("/", StaticFiles(directory=FRONTEND_DIST, html=True), name="static")
