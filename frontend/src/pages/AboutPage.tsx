@@ -2,17 +2,61 @@ export default function AboutPage() {
   return (
     <div className="about-page">
       <h1>About AquaWatch</h1>
-      <p>AquaWatch is a local Assam flood mapping and short-term risk forecasting demo for the Brahmaputra basin.</p>
+      <p>AquaWatch is an AI-powered flood extent mapping and multi-horizon water-level forecasting platform for the Brahmaputra basin in Assam.</p>
       <section className="card">
-        <h2>How to use this demo</h2>
+        <h2>How to use the platform</h2>
         <ol className="steps-list">
-          <li>Choose an imagery date on the dashboard to inspect the mock flood overlay.</li>
-          <li>Select a station marker or station card to open its 72-hour forecast.</li>
-          <li>Use the simulated alert button to demonstrate the alert flow.</li>
+          <li>Select an imagery date on the dashboard to view the Sentinel-1 SAR flood extent overlay.</li>
+          <li>Click any monitoring station marker or sidebar card to view its 24h, 48h, and 72h water-level forecast.</li>
+          <li>Review contributing risk factors (recent rainfall, rate of rise, and soil saturation).</li>
+          <li>Visit the Model Evaluation tab to inspect benchmark comparisons, attention weights, and backtest results.</li>
         </ol>
       </section>
-      <section className="card"><h2>Data sources and use</h2><table><thead><tr><th>Source</th><th>Use</th></tr></thead><tbody><tr><td>Sentinel-1 SAR</td><td>Flood extent mapping and acquisition-date context.</td></tr><tr><td>CWC / IMD rainfall</td><td>Rainfall features for forecasting.</td></tr><tr><td>Assam State Disaster Management / CWC</td><td>River-level monitoring and danger thresholds.</td></tr><tr><td>MMFlood and Sen1Floods11</td><td>Future segmentation training and evaluation.</td></tr><tr><td>OpenStreetMap</td><td>Map tiles and geographic context.</td></tr></tbody></table></section>
-      <section className="card"><h2>Limitations</h2><div className="limitation"><strong>Mock mode:</strong> This local demo uses deterministic mock data.</div><div className="limitation"><strong>Satellite revisit:</strong> Sentinel-1 imagery is not real-time; the acquisition date is shown separately.</div><div className="limitation"><strong>Simulated alerts:</strong> No SMS, email, or push notification is sent.</div><div className="limitation"><strong>No persistence:</strong> Runtime results are held in memory and reset when the backend restarts.</div></section>
+      <section className="card">
+        <h2>AI Models &amp; Data Sources</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Component / Source</th>
+              <th>Technical Function</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Member 1: ResNet-34 U-Net</td>
+              <td>Dual-polarization (VV/VH) Sentinel-1 SAR surface water segmentation at 10m spatial resolution.</td>
+            </tr>
+            <tr>
+              <td>Member 2: FloodLSTM</td>
+              <td>Multi-horizon (24h, 48h, 72h) river level forecasting using stacked 2-layer LSTM with 60 engineered features.</td>
+            </tr>
+            <tr>
+              <td>CWC River Telemetry</td>
+              <td>Hourly gauge station water levels and danger threshold monitoring.</td>
+            </tr>
+            <tr>
+              <td>IMD Rainfall Data</td>
+              <td>Rolling cumulative rainfall (3h, 6h, 12h, 24h, 48h, 72h) and antecedent soil moisture proxies.</td>
+            </tr>
+            <tr>
+              <td>OpenStreetMap</td>
+              <td>Geographic context and basemap tile rendering.</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+      <section className="card">
+        <h2>Operational Notes</h2>
+        <div className="limitation">
+          <strong>Satellite Revisit:</strong> Sentinel-1 SAR imagery is refreshed every 6 to 12 days; the satellite acquisition date is shown alongside each overlay.
+        </div>
+        <div className="limitation">
+          <strong>Alert Simulations:</strong> The alert simulation tests emergency alert triggers based on danger level proximity.
+        </div>
+        <div className="limitation">
+          <strong>In-Memory Serving:</strong> Models and recent feature windows are cached in memory for sub-second API responsiveness.
+        </div>
+      </section>
     </div>
   )
 }

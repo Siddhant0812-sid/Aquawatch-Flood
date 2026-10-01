@@ -165,10 +165,10 @@ export default function StationDetailPage() {
       </section>
 
       <section className="card">
-        <h2>Simulated alert</h2>
-        <p className="meta">Demo action only. No real notification will be sent.</p>
+        <h2>Emergency Alert Simulation</h2>
+        <p className="meta">Test automated alert protocol based on forecast danger-threshold breach.</p>
         <button className="btn btn-warning" type="button" onClick={handleAlert} disabled={alertLoading}>
-          {alertLoading ? 'Sending…' : 'Simulate alert'}
+          {alertLoading ? 'Testing…' : 'Trigger alert test'}
         </button>
         {alert && (
           <div className={`alert-banner ${alert.triggered ? 'triggered' : 'not-triggered'}`}>
