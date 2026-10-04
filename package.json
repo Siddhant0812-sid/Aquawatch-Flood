@@ -1,0 +1,12 @@
+{
+  "name": "aquawatch-flood",
+  "private": true,
+  "version": "1.0.0",
+  "description": "AquaWatch Flood - Assam & Brahmaputra basin flood mapping & forecasting",
+  "scripts": {
+    "dev": "npm --prefix frontend run dev",
+    "build": "npm --prefix frontend run build",
+    "lint": "npm --prefix frontend run lint",
+    "preview": "npm --prefix frontend run preview"
+  }
+}

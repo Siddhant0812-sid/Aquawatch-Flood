@@ -51,7 +51,46 @@ def main():
     # training/explainability stages and are not required to discover paths.
     import numpy as np
     import torch
-    from sklearn.preprocessing import MinMaxScaler
+    try:
+        from sklearn.preprocessing import MinMaxScaler
+    except (ImportError, Exception):
+        class MinMaxScaler:
+            """Robust pure-Python / NumPy fallback for MinMaxScaler.
+            Avoids C-extension DLL crashes on Windows with App Control policies.
+            """
+            def __init__(self, feature_range=(0, 1), copy=True, clip=False):
+                self.feature_range = feature_range
+                self.copy = copy
+                self.clip = clip
+                self.data_min_ = None
+                self.data_max_ = None
+                self.min_ = None
+                self.scale_ = None
+    
+            def fit(self, X, y=None):
+                X = np.asarray(X)
+                self.data_min_ = np.nanmin(X, axis=0)
+                self.data_max_ = np.nanmax(X, axis=0)
+                diff = self.data_max_ - self.data_min_
+                diff[diff == 0.0] = 1.0
+                self.scale_ = (self.feature_range[1] - self.feature_range[0]) / diff
+                self.min_ = self.feature_range[0] - self.data_min_ * self.scale_
+                return self
+    
+            def transform(self, X):
+                X = np.asarray(X)
+                res = X * self.scale_ + self.min_
+                if self.clip:
+                    res = np.clip(res, self.feature_range[0], self.feature_range[1])
+                return res
+    
+            def fit_transform(self, X, y=None):
+                return self.fit(X, y).transform(X)
+    
+            def inverse_transform(self, X):
+                X = np.asarray(X)
+                return (X - self.min_) / self.scale_
+    
     print("  AquaWatch Full Pipeline")
 
     # ── 1. Data ──────────────────────────────────────────────────

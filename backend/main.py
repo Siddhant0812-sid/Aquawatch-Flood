@@ -8,6 +8,7 @@ from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from dotenv import load_dotenv
+
 try:
     from .model_service import ModelService
 except ImportError:  # supports `uvicorn main:app` from backend/
@@ -16,8 +17,8 @@ except ImportError:  # supports `uvicorn main:app` from backend/
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 load_dotenv(PROJECT_ROOT / ".env")
 
-USE_MOCK_DATA = os.getenv("USE_MOCK_DATA", "True").lower() in ("true", "1", "yes")
-USE_MOCK_MODELS = os.getenv("USE_MOCK_MODELS", "True").lower() in ("true", "1", "yes")
+USE_MOCK_DATA = os.getenv("USE_MOCK_DATA", "False").lower() in ("true", "1", "yes")
+USE_MOCK_MODELS = os.getenv("USE_MOCK_MODELS", "False").lower() in ("true", "1", "yes")
 
 app = FastAPI(title="AquaWatch Flood API")
 
@@ -92,7 +93,18 @@ def get_segment(date: str):
             detail={"error": "invalid_date", "detail": "Invalid date format, use YYYY-MM-DD"},
         ) from exc
 
-    return MODEL_SERVICE.segment(date)
+    try:
+        return MODEL_SERVICE.segment(date)
+    except FileNotFoundError as exc:
+        raise HTTPException(
+            status_code=404,
+            detail={"error": "model_or_input_not_found", "detail": str(exc)},
+        ) from exc
+    except Exception as exc:
+        raise HTTPException(
+            status_code=500,
+            detail={"error": "inference_error", "detail": f"Segmentation inference failed: {exc}"},
+        ) from exc
 
 
 @app.get("/forecast")
@@ -104,7 +116,18 @@ def get_forecast(station_id: str):
             detail={"error": "not_found", "detail": f"Station {station_id} not found"},
         )
 
-    return MODEL_SERVICE.forecast(station)
+    try:
+        return MODEL_SERVICE.forecast(station)
+    except FileNotFoundError as exc:
+        raise HTTPException(
+            status_code=404,
+            detail={"error": "model_or_input_not_found", "detail": str(exc)},
+        ) from exc
+    except Exception as exc:
+        raise HTTPException(
+            status_code=500,
+            detail={"error": "forecast_error", "detail": f"Forecast inference failed: {exc}"},
+        ) from exc
 
 
 class AlertRequest(BaseModel):
@@ -131,9 +154,9 @@ def simulate_alert(req: AlertRequest):
     label = get_risk_label(req.risk_score)
 
     if triggered:
-        message = f"Simulated alert: {label} risk at {station['name']} (demo only, no real notification sent)"
+        message = f"Emergency Alert: {label} risk triggered at {station['name']} gauge"
     else:
-        message = f"No alert threshold crossed at {station['name']} (demo only, no real notification sent)"
+        message = f"No emergency threshold breach detected at {station['name']} gauge"
 
     return {"triggered": triggered, "message": message}
 
@@ -167,7 +190,7 @@ def get_evaluation_summary():
             "resolution_m": 10.0,
             "window_size": 256,
             "stride": 64,
-            "threshold": 0.50,
+            "threshold": 0.40,
             "target": "Binary surface water / flood extent"
         },
         "artifacts": {
@@ -178,6 +201,11 @@ def get_evaluation_summary():
         }
     }
 
+
+# Static mount for prediction images
+PREDICTIONS_DIR = PROJECT_ROOT / "data" / "outputs" / "predictions"
+PREDICTIONS_DIR.mkdir(parents=True, exist_ok=True)
+app.mount("/predictions", StaticFiles(directory=PREDICTIONS_DIR), name="predictions")
 
 OUTPUTS_DIR = PROJECT_ROOT / "outputs"
 if OUTPUTS_DIR.exists():

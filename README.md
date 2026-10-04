@@ -1,170 +1,145 @@
 # AquaWatch Flood
 
-AquaWatch is a local demo dashboard for flood awareness in Assam and the
-Brahmaputra basin. It combines a FastAPI backend with a React, Leaflet, and
-Recharts frontend to display:
+AquaWatch is an integrated local application for flood awareness and emergency monitoring in Assam and the Brahmaputra basin. It combines a FastAPI backend with a React, Leaflet, and Recharts frontend to display:
 
-- flood extent on a map (real U-Net inference when configured, otherwise deterministic demo data);
-- five Brahmaputra monitoring stations and their risk levels;
-- 24-hour, 48-hour, and 72-hour water-level forecasts;
-- forecast contributing factors and danger-level reference lines; and
-- a clearly labelled simulated alert action.
+- **Sentinel-1 SAR flood extent mapping** (real ResNet-34 U-Net inference with horizontal-flip test-time augmentation, georeferenced GeoJSON map polygons, and side-by-side VV vs. flood mask imagery);
+- **Five Brahmaputra monitoring stations** and their operational risk levels;
+- **24-hour, 48-hour, and 72-hour hydrological forecasts** driven by stacked multi-horizon LSTMs with 60 engineered features;
+- **Forecast contributing factors** (72h rainfall sums, rate of rise, upstream levels);
+- **Dedicated model evaluation & explainability tab** showing ARIMA vs. LSTM vs. TFT-Lite benchmarks, temporal attention weights, and the historic 2022 Assam monsoon backtest; and
+- **Automated emergency alert simulation** testing danger-threshold protocols.
 
-The application is intentionally mock-first. It does not require Earth Engine
-credentials, a database, cloud deployment, or external model files to run the
-demo. The API response contracts remain stable when model adapters are used.
-When `USE_MOCK_MODELS=false`, the backend lazily attempts to use compatible
-artifacts under `models/` and a scene selected by `SEGMENT_INPUT_PATH`.
-Missing or incompatible artifacts are logged and use deterministic demo data;
-models are never trained during backend startup.
+---
 
-## Project structure
+## 1. Project Structure
 
 ```text
 AquaWatch Flood/
 ├── backend/
-│   ├── main.py              # Complete FastAPI backend and mock API
-│   ├── requirements.txt     # Backend Python dependencies
-│   └── tests/test_api.py    # Focused backend API tests
+│   ├── main.py                  # FastAPI server, endpoints, and static mounts
+│   ├── model_service.py         # Model integration (lazy cache, U-Net TTA, LSTM)
+│   ├── requirements.txt         # Backend Python dependencies
+│   └── tests/test_api.py        # Focused unit and integration tests
+├── data/
+│   ├── assam_sample.tif         # Georeferenced 2-band Sentinel-1 SAR GeoTIFF (VV/VH)
+│   ├── sar_sample.npy           # Dual-pol SAR numpy array fallback
+│   ├── raw_rainfall_cwc_assam.csv
+│   ├── raw_water_level_assam.csv
+│   └── processed/               # Cleaned hourly features for forecasting
 ├── frontend/
 │   ├── src/
-│   │   ├── App.tsx          # Routes and application shell
-│   │   ├── pages/           # Dashboard, station detail, and About views
-│   │   └── api/client.ts    # Typed API client
-│   └── package.json
-├── data/                    # Local raw and processed inputs
-├── models/                  # Forecasting and segmentation modules
-├── .env.example             # Local configuration template
-└── run_app.bat              # Windows backend launcher
+│   │   ├── App.tsx              # Application shell and route configuration
+│   │   ├── api/client.ts        # Typed API client and response interfaces
+│   │   └── pages/
+│   │       ├── DashboardPage.tsx       # Live map, stations, and U-Net output panel
+│   │       ├── ModelEvaluationPage.tsx # Benchmark metrics and explainability plots
+│   │       ├── StationDetailPage.tsx   # 72h forecast chart and alert simulation
+│   │       └── AboutPage.tsx           # Technical architecture and data sources
+│   ├── package.json
+│   └── vite.config.ts           # Development server with /api, /outputs, /predictions proxy
+├── models/
+│   ├── inference.py             # U-Net sliding window, TTA, and panel generator
+│   ├── unet_resnet34_best.pt    # Member 1 trained U-Net checkpoint (~98 MB)
+│   ├── model_lstm.py            # Member 2 PyTorch LSTM forecasting architecture
+│   ├── lstm_best.pt             # Trained multi-horizon LSTM checkpoint
+│   └── x_scaler_params.npy      # Feature normalization metadata
+├── outputs/
+│   └── explainability/          # Model comparison CSV, attention and backtest plots
+└── test_pipeline.py             # Verification script for models and pipeline
 ```
 
-## Requirements
+---
 
-- Python 3.10 or newer
-- Node.js 18 or newer and npm
+## 2. Configuration (`.env`)
 
-The backend dependencies are listed in [backend/requirements.txt](backend/requirements.txt).
-The frontend dependencies are listed in [frontend/package.json](frontend/package.json).
+Copy `.env.example` to `.env` to configure the application:
 
-## Run the backend
+```bash
+# Model Execution Mode
+USE_MOCK_DATA=false
+USE_MOCK_MODELS=false
 
-From the repository root on Windows, create and activate a virtual environment
-(recommended), then install the backend dependencies:
+# Member 1: Segmentation Configuration
+SEGMENTATION_MODEL=models/unet_resnet34_best.pt
+SEGMENT_INPUT_PATH=data/assam_sample.tif
 
-```powershell
-cd backend
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-python -m pip install -r requirements.txt
-python -m uvicorn main:app --reload --host 127.0.0.1 --port 8000
+# Member 2: Forecasting Configuration
+FORECAST_MODEL=models/lstm_best.pt
+
+# Server Ports
+BACKEND_HOST=127.0.0.1
+BACKEND_PORT=8000
 ```
 
-Alternatively, double-click [run_app.bat](run_app.bat). The API is available
-at `http://127.0.0.1:8000`.
+### Segmentation Details & Assumptions
+- **Input Bands**: 2-band GeoTIFF with Band 1 = VV and Band 2 = VH.
+- **Normalization**: Scales uint8 `[0, 255]` to `[-1.0, 1.0]` via `(x / 255.0 - 0.5) / 0.5`.
+- **Sliding Window**: 256-pixel window with stride 64.
+- **Test-Time Augmentation (TTA)**: Horizontal flip augmentation (infers original and horizontally flipped scene, flips back, and averages probabilities).
+- **Threshold**: Binary flood mask generated at probability `0.40`.
+- **Georeferencing**: Preserves the GeoTIFF affine transform and projects coordinates to WGS84 (`EPSG:4326`) for Leaflet display. If an unreferenced scene is passed, the prediction PNG is still served while a clear warning note is returned for map polygons.
+- **Output Image**: Generates a side-by-side composite panel (Sentinel-1 VV amplitude alongside the predicted flood mask) saved to `data/outputs/predictions/` and served via `/predictions/...`.
 
-The backend is intentionally contained in the single
-[backend/main.py](backend/main.py) entrypoint. It serves the API and, when a
-production frontend build exists, can also serve `frontend/dist`.
+---
 
-The virtual environment is not technically mandatory, but it is strongly
-recommended. It keeps FastAPI, Uvicorn, PyTorch, and the other project
-packages isolated from other Python projects. If you do not want to use one,
-run `python -m pip install -r backend/requirements.txt` from the repository
-root instead.
+## 3. Step-by-Step Setup from Scratch
 
-## Run the frontend
+To run the application, open two separate terminals from the project root:
 
-Install frontend dependencies and start the frontend:
+### Terminal 1: Backend Setup & Server (Port 8000)
 
-```powershell
-cd frontend
-npm install
-npm run dev
-```
+1. **Activate or create your Python virtual environment**:
+   ```powershell
+   # If creating a fresh venv:
+   python -m venv .venv
+   
+   # Activate:
+   Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned
+   .\.venv\Scripts\Activate.ps1
+   ```
 
-Open `http://127.0.0.1:5173` in a browser. The Vite proxy sends `/api/*`
-requests to the backend at `http://127.0.0.1:8000`. The supported frontend
-workflow is `npm install` followed by `npm run dev`.
+2. **Install backend dependencies**:
+   ```powershell
+   pip install -r backend/requirements.txt
+   ```
 
-To create a production frontend build:
+3. **Verify the models and pipeline (Optional but recommended)**:
+   ```powershell
+   python test_pipeline.py
+   python -m pytest backend/tests/test_api.py -v
+   ```
 
-```powershell
-npm run build
-```
+4. **Start the FastAPI backend with Uvicorn**:
+   ```powershell
+   python -m uvicorn backend.main:app --host 127.0.0.1 --port 8000 --reload
+   ```
+   *The backend API will start at `http://127.0.0.1:8000`.*
 
-## API endpoints
+---
 
-| Method | Endpoint | Purpose |
-| --- | --- | --- |
-| `GET` | `/health` | Backend readiness check |
-| `GET` | `/stations` | Five station summaries and current risk labels |
-| `GET` | `/segment?date=YYYY-MM-DD` | U-Net GeoJSON overlay when configured, otherwise demo overlay |
-| `GET` | `/forecast?station_id=guwahati` | Current level and 24/48/72-hour forecast |
-| `POST` | `/simulate-alert` | Demo alert action for a station and risk score |
+### Terminal 2: Frontend Setup & Server (Port 5173)
 
-Example requests:
+1. **Install Node packages**:
+   ```powershell
+   cd frontend
+   npm install
+   ```
 
-```powershell
-curl.exe http://127.0.0.1:8000/health
-curl.exe "http://127.0.0.1:8000/forecast?station_id=guwahati"
-curl.exe -X POST http://127.0.0.1:8000/simulate-alert `
-  -H "Content-Type: application/json" `
-  -d '{"station_id":"guwahati","risk_score":0.8}'
-```
+2. **Start the Vite development server**:
+   ```powershell
+   npm run dev
+   ```
+   *The React dashboard will be running at `http://127.0.0.1:5173`.*
+   *All API calls (`/api`, `/outputs`, `/predictions`) are automatically proxied to the backend on port 8000.*
 
-Invalid dates, unknown stations, and out-of-range risk scores return explicit
-JSON errors with `error` and `detail` fields.
+---
 
-## Run tests
+## 4. API Endpoints
 
-From the backend directory:
-
-```powershell
-cd backend
-python -m pytest tests/test_api.py -q
-```
-
-From `frontend/`:
-
-```powershell
-npm run build
-npm run lint
-```
-
-## Configuration and limitations
-
-Copy [.env.example](.env.example) to `.env` when local overrides are needed.
-The default configuration enables mock data and mock models.
-
-This is a local demonstration system:
-
-- mock data is deterministic and held in memory;
-- Sentinel-1 imagery is represented by a mock overlay and is not real-time;
-- the displayed imagery acquisition date may differ from the selected date;
-- simulated alerts do not send SMS, email, or push notifications;
-- there is no authentication, database, or cloud deployment layer; and
-- Member 1's U-Net checkpoint is loaded only when `USE_MOCK_MODELS=false` and
-  `SEGMENT_INPUT_PATH` points to a two-band `.tif`/`.tiff`/`.npy` scene;
-- Member 2's training pipeline is available through `run_all.py`, but training
-  is an explicit offline step and never runs as part of API startup; and
-- the current dashboard station IDs are different from Member 2's training
-  station names, so forecast requests use the stable demo adapter until a
-  station mapping and inference metadata are produced.
-
-## Run the Member 2 training pipeline
-
-Training is intentionally separate from server startup. From the repository
-root:
-
-```powershell
-python run_all.py
-```
-
-The script writes processed data, checkpoints, metrics, and explainability
-outputs under `data/processed/`, `models/`, and `outputs/`. It can be run from
-any directory because it normalizes paths to the repository root. After
-training, restart the backend so it can discover compatible artifacts.
-
-See [BACKEND_SCHEMA.md](BACKEND_SCHEMA.md),
-[APP_FLOW.md](APP_FLOW.md), [TRD.md](TRD.md), and
-[UI_UX_DESIGN.md](UI_UX_DESIGN.md) for the detailed requirements baseline.
+- `GET /health` — Health check status.
+- `GET /stations` — List Brahmaputra basin gauge stations and current risk levels.
+- `GET /segment?date=YYYY-MM-DD` — Real U-Net flood segmentation (GeoJSON polygons, coverage percentage, actual acquisition date, and prediction image URL).
+- `GET /forecast?station_id=<id>` — 24h, 48h, 72h LSTM water-level forecasts and risk factors.
+- `GET /evaluation-summary` — Model comparison metrics and explainability plot paths.
+- `GET /predictions/<filename>` — Static serving of generated U-Net side-by-side panels.
+- `POST /simulate-alert` — Emergency alert threshold testing.

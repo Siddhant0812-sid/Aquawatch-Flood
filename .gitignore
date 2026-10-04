@@ -16,7 +16,8 @@ build/
 # Generated data and outputs
 data/outputs/
 data/mock/
+outputs/predictions/
+outputs/temp/
 
 # IDE
 .vscode/
-

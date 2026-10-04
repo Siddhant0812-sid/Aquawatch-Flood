@@ -1,9 +1,10 @@
+from pathlib import Path
 from fastapi.testclient import TestClient
 
 try:
-    from backend.main import app
+    from backend.main import app, MODEL_SERVICE
 except ModuleNotFoundError:
-    from main import app
+    from main import app, MODEL_SERVICE
 
 client = TestClient(app)
 
@@ -35,6 +36,7 @@ def test_segment_and_error_shapes():
     payload = response.json()
     assert payload['date'] == '2026-07-30'
     assert 'mask_geojson' in payload
+    assert 'imagery_acquisition_date' in payload
 
     invalid = client.get('/segment?date=invalid')
     assert invalid.status_code == 400
@@ -42,11 +44,43 @@ def test_segment_and_error_shapes():
 
 
 def test_model_service_is_deterministic_in_mock_mode():
-    first = client.get('/segment?date=2026-07-30').json()
-    second = client.get('/segment?date=2026-07-30').json()
+    first = MODEL_SERVICE._mock_segment('2026-07-30')
+    second = MODEL_SERVICE._mock_segment('2026-07-30')
     assert first == second
-    forecast = client.get('/forecast?station_id=guwahati').json()
+    assert first['prediction_image_url'] is None
+    assert first['is_real_model'] is False
+
+    forecast = MODEL_SERVICE._mock_forecast(
+        {'station_id': 'guwahati', 'name': 'Guwahati', 'danger_level_m': 49.5}
+    )
     assert [p['horizon_hours'] for p in forecast['forecasts']] == [24, 48, 72]
+
+
+def test_segment_prediction_image_and_static_serving():
+    response = client.get('/segment?date=2026-07-30')
+    assert response.status_code == 200
+    payload = response.json()
+
+    # In real mode with assam_sample.tif or sar_sample.npy, prediction_image_url is returned
+    img_url = payload.get('prediction_image_url')
+    assert img_url is not None
+    assert img_url.startswith('/predictions/')
+
+    # Verify PNG is reachable via static mount and valid image content
+    img_resp = client.get(img_url)
+    assert img_resp.status_code == 200
+    assert 'image/png' in img_resp.headers.get('content-type', '')
+    assert len(img_resp.content) > 1000  # Non-trivial PNG file
+
+
+def test_real_mode_missing_scene_raises_actionable_error(monkeypatch):
+    monkeypatch.setenv('SEGMENT_INPUT_PATH', 'data/non_existent_scene.tif')
+    response = client.get('/segment?date=2026-07-30')
+    # Real mode must NOT silently fall back to mock data
+    assert response.status_code == 404
+    body = response.json()
+    assert body['error'] == 'model_or_input_not_found'
+    assert 'non_existent_scene.tif' in body['detail']
 
 
 def test_alert_validation():

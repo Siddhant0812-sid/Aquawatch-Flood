@@ -32,6 +32,11 @@ export interface SegmentResponse {
   mask_geojson: GeoJSON.FeatureCollection
   coverage_pct: number
   imagery_acquisition_date: string
+  prediction_image_url?: string | null
+  validation_samples_url?: string | null
+  model_name?: string
+  is_real_model?: boolean
+  georeferencing_error?: string | null
 }
 
 export interface ForecastPoint {
@@ -82,6 +87,8 @@ export interface EvaluationSummaryResponse {
     attention_lstm_plot: string
     attention_tft_plot: string
     backtest_plot: string
+    sar_comparison_plot?: string
+    sar_samples_plot?: string
   }
 }
 
