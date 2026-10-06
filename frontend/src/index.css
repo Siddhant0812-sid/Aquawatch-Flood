@@ -1,9 +1,9 @@
 :root {
-  font-family: Inter, 'Segoe UI', sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
-  color: #0f172a;
-  background: #eaf4ff;
+  color: #f8fafc;
+  background-color: #070b14;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -16,23 +16,19 @@
 
 html, body, #root {
   margin: 0;
+  padding: 0;
   min-height: 100%;
   min-height: 100vh;
+  background-color: #070b14;
 }
 
 body {
-  background: linear-gradient(180deg, #eef7ff 0%, #f8fbff 100%);
+  background-color: #070b14;
+  color: #f8fafc;
+  overflow-x: hidden;
 }
 
 a {
   color: inherit;
   text-decoration: none;
-}
-
-button, input {
-  font: inherit;
-}
-
-img {
-  max-width: 100%;
 }
