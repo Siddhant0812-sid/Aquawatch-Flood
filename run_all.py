@@ -1,7 +1,7 @@
 """
-AquaWatch — Member 2: Master Run Script
-========================================
-Run this to execute the full Member 2 pipeline end-to-end:
+AquaWatch — Hydrological Forecasting Pipeline Runner
+===================================================
+Run this to execute the full forecasting pipeline end-to-end:
 
     python run_all.py
 

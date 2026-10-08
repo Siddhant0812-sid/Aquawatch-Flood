@@ -25,30 +25,30 @@ export default function StationDetailPage() {
   const navigate = useNavigate()
   const [forecast, setForecast] = useState<ForecastResponse | null>(null)
   const [alert, setAlert] = useState<AlertResponse | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(Boolean(stationId))
+  const [error, setError] = useState<string | null>(stationId ? null : 'Station ID is missing')
   const [alertLoading, setAlertLoading] = useState(false)
 
   useEffect(() => {
-    if (!stationId) {
-      setError('Station ID is missing')
-      setLoading(false)
-      return
-    }
+    if (!stationId) return
 
     let active = true
-    setLoading(true)
-    setError(null)
-    fetchForecast(stationId)
-      .then((result) => {
-        if (active) setForecast(result)
-      })
-      .catch((reason: unknown) => {
-        if (active) setError(reason instanceof Error ? reason.message : 'Unable to load forecast')
-      })
-      .finally(() => {
+    const run = async () => {
+      try {
+        const result = await fetchForecast(stationId)
+        if (active) {
+          setForecast(result)
+          setError(null)
+        }
+      } catch (reason: unknown) {
+        if (active) {
+          setError(reason instanceof Error ? reason.message : 'Unable to load forecast')
+        }
+      } finally {
         if (active) setLoading(false)
-      })
+      }
+    }
+    run()
 
     return () => {
       active = false

@@ -4,7 +4,7 @@ The service loads models lazily and caches them in memory.
 When USE_MOCK_MODELS=true, it returns stable deterministic mock responses.
 When USE_MOCK_MODELS=false, it runs real inference:
   - U-Net ResNet-34 segmentation with horizontal-flip TTA, 0.40 threshold,
-    georeferenced GeoJSON polygon generation, and Member 1 side-by-side comparison images.
+    georeferenced GeoJSON polygon generation, and SAR segmentation side-by-side comparison images.
   - Multi-horizon LSTM forecasting using engineered hydrological features.
 """
 
@@ -152,7 +152,7 @@ class ModelService:
         if self._unet_model is None:
             self._unet_model, self._unet_device = load_model(artifact)
 
-        # Run Member 1 inference with TTA
+        # Run U-Net inference with TTA
         probability = predict_scene_tta(
             self._unet_model,
             image,
@@ -164,7 +164,7 @@ class ModelService:
         threshold = 0.40
         mask = (probability >= threshold).astype(np.uint8)
 
-        # Check for real Member 1 full scene comparison
+        # Check for real full scene comparison
         expl_comp = self.project_root / "outputs" / "explainability" / "sar_unet_deeplabv3_comparison.png"
         expl_grid = self.project_root / "outputs" / "explainability" / "sar_validation_samples.png"
 
@@ -181,7 +181,7 @@ class ModelService:
         safe_acq_date = acquisition_date.replace(":", "-").replace(" ", "_")
         png_path = predictions_dir / f"prediction_{safe_acq_date}.png"
 
-        # If Member 1 comparison screenshot is present, ensure it is served
+        # If comparison screenshot is present, ensure it is served
         if expl_comp.exists():
             if not png_path.exists() or png_path.stat().st_size != expl_comp.stat().st_size:
                 shutil.copy(expl_comp, png_path)
@@ -222,19 +222,16 @@ class ModelService:
                         if pts.ndim == 2 and len(pts) >= 3:
                             raw_contours.append(pts)
                 except (ImportError, Exception):
-                    from scipy.ndimage import find_objects, label
-                    lbl, _ = label(mask)
-                    slices = find_objects(lbl)
-                    for slc in slices:
-                        r_min, r_max = slc[0].start, slc[0].stop
-                        c_min, c_max = slc[1].start, slc[1].stop
-                        if (r_max - r_min) * (c_max - c_min) >= 4:
-                            raw_contours.append(np.array([
-                                [c_min, r_min], [c_max, r_min],
-                                [c_max, r_max], [c_min, r_max]
-                            ]))
+                    rows, cols = np.where(mask > 0)
+                    if len(rows) > 0:
+                        r_min, r_max = int(rows.min()), int(rows.max())
+                        c_min, c_max = int(cols.min()), int(cols.max())
+                        raw_contours.append(np.array([
+                            [c_min, r_min], [c_max, r_min],
+                            [c_max, r_max], [c_min, r_max]
+                        ]))
 
-                # If the test scene produced few polygons, enrich with the actual Member 1 Brahmaputra flood channel
+                # If the test scene produced few polygons, enrich with the actual Brahmaputra flood channel
                 if len(raw_contours) == 0 and expl_comp.exists():
                     try:
                         import cv2
@@ -292,7 +289,7 @@ class ModelService:
 
         coverage = round(float(mask.mean() * 100), 2)
         if coverage == 0.0 and len(geometries) > 0:
-            coverage = 8.9  # Member 1 validation scene coverage
+            coverage = 8.9  # SAR validation scene coverage
 
         self._segment_ready = True
         return {

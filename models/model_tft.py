@@ -1,6 +1,6 @@
 """
-AquaWatch — Member 2: Temporal Fusion Transformer (TFT)
-========================================================
+AquaWatch — Temporal Fusion Transformer (TFT)
+============================================
 Comparison model against LSTM. Uses pytorch-forecasting's TFT implementation.
 
 TFT advantages over LSTM:

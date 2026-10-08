@@ -1,5 +1,5 @@
 """
-AquaWatch — Member 2: LSTM Forecasting Model
+AquaWatch — Hydrological LSTM Forecasting Model
 =============================================
 Multi-step (24h / 48h / 72h) water-level forecasting using LSTM.
 

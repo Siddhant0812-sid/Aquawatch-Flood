@@ -1,5 +1,5 @@
 """
-AquaWatch — Member 2: ARIMA Baseline
+AquaWatch — Hydrological ARIMA Baseline
 ======================================
 Fits a per-station ARIMA model and produces 24h/48h/72h forecasts.
 Results are saved so LSTM/TFT can be compared against this baseline.

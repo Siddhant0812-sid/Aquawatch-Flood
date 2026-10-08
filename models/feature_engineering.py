@@ -1,5 +1,5 @@
 """
-AquaWatch — Member 2: Feature Engineering
+AquaWatch — Hydrological Feature Engineering
 ==========================================
 Transforms the merged hourly DataFrame into model-ready features.
 

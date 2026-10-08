@@ -1,5 +1,5 @@
 """
-AquaWatch — Member 2: Explainability & Evaluation
+AquaWatch — Hydrological Explainability & Evaluation
 ==================================================
 Covers:
   1. Attention weight visualization (LSTM proxy + TFT-Lite real attention)

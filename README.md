@@ -39,8 +39,8 @@ AquaWatch Flood/
 │   └── vite.config.ts           # Development server with /api, /outputs, /predictions proxy
 ├── models/
 │   ├── inference.py             # U-Net sliding window, TTA, and panel generator
-│   ├── unet_resnet34_best.pt    # Member 1 trained U-Net checkpoint (~98 MB)
-│   ├── model_lstm.py            # Member 2 PyTorch LSTM forecasting architecture
+│   ├── unet_resnet34_best.pt    # Trained U-Net checkpoint (~98 MB)
+│   ├── model_lstm.py            # PyTorch LSTM forecasting architecture
 │   ├── lstm_best.pt             # Trained multi-horizon LSTM checkpoint
 │   └── x_scaler_params.npy      # Feature normalization metadata
 ├── outputs/
@@ -59,11 +59,11 @@ Copy `.env.example` to `.env` to configure the application:
 USE_MOCK_DATA=false
 USE_MOCK_MODELS=false
 
-# Member 1: Segmentation Configuration
+# SAR Segmentation Configuration
 SEGMENTATION_MODEL=models/unet_resnet34_best.pt
 SEGMENT_INPUT_PATH=data/assam_sample.tif
 
-# Member 2: Forecasting Configuration
+# Hydrological Forecasting Configuration
 FORECAST_MODEL=models/lstm_best.pt
 
 # Server Ports

@@ -26,15 +26,15 @@ export default function ModelEvaluationPage() {
       <section className="card">
         <h2>Model Evaluation & Performance Benchmarks</h2>
         <p className="description">
-          Detailed metrics, attention maps, and historical backtests for <strong>Member 1</strong> (SAR
-          Surface Water Segmentation) and <strong>Member 2</strong> (Multi-Horizon Hydrological Forecasting).
+          Detailed metrics, attention maps, and historical backtests for <strong>SAR Surface Water Segmentation</strong> (U-Net)
+          and <strong>Multi-Horizon Hydrological Forecasting</strong> (LSTM / TFT).
         </p>
       </section>
 
-      {/* Member 1: SAR Segmentation Section */}
+      {/* SAR Segmentation Section */}
       <section className="card">
         <div className="section-header">
-          <span className="source-tag">Member 1 Contribution</span>
+          <span className="source-tag">SAR Segmentation</span>
           <h3>Sentinel-1 SAR Flood Extent Segmentation (U-Net)</h3>
         </div>
         <p>
@@ -75,10 +75,10 @@ export default function ModelEvaluationPage() {
         </div>
       </section>
 
-      {/* Member 2: Forecasting & Explainability Section */}
+      {/* Forecasting & Explainability Section */}
       <section className="card">
         <div className="section-header">
-          <span className="source-tag">Member 2 Contribution</span>
+          <span className="source-tag">Hydrological Forecasting</span>
           <h3>Hydrological Forecasting & Model Comparison</h3>
         </div>
         <p>

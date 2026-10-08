@@ -1,6 +1,6 @@
 """
-AquaWatch — Member 2: Data Pipeline
-=====================================
+AquaWatch — Hydrological Telemetry Data Pipeline
+==============================================
 Handles:
   - Synthetic data generation (swap out for real NWDP CSVs later)
   - Loading & merging rainfall + water-level telemetry
@@ -221,7 +221,7 @@ def save_processed(df: pd.DataFrame, name: str):
 # ── Main entry ───────────────────────────────────────────────────────────────
 def run_pipeline() -> pd.DataFrame:
     print("=" * 60)
-    print("AquaWatch | Member 2 | Data Pipeline")
+    print("AquaWatch | Hydrological Data Pipeline")
     print("=" * 60)
 
     print("\n[1/4] Generating water-level data ...")

@@ -1,4 +1,4 @@
-"""Smoke tests for the Member 1/2 adapters and data pipeline."""
+"""Smoke tests for the segmentation and forecasting adapters and data pipeline."""
 
 import unittest
 from pathlib import Path
@@ -10,7 +10,7 @@ from backend.model_service import ModelService
 class TestPipeline(unittest.TestCase):
     """Keep model-adapter startup checks independent of heavyweight training."""
 
-    def test_member_two_inputs_are_available(self):
+    def test_forecasting_inputs_are_available(self):
         water_level = generate_synthetic_water_level()
         rainfall = generate_synthetic_rainfall()
         self.assertEqual(list(water_level.columns), list(rainfall.columns))

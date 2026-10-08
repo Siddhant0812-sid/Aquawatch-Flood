@@ -18,17 +18,19 @@ Input types:
 import argparse
 import json
 import logging
+import warnings
 from pathlib import Path
 
 import numpy as np
 import torch
 import segmentation_models_pytorch as smp
-from scipy.ndimage import uniform_filter
 
 # Guard rasterio to prevent crash if Windows Application Control blocks C-DLLs
 try:
     import rasterio
+    import rasterio.errors
     from rasterio.features import shapes
+    warnings.filterwarnings("ignore", category=getattr(rasterio.errors, "NotGeoreferencedWarning", UserWarning))
 except (ImportError, Exception):
     rasterio = None
 
@@ -38,6 +40,23 @@ DEFAULT_THRESHOLD = 0.40
 DEFAULT_WINDOW = 256
 DEFAULT_STRIDE = 64
 DEFAULT_BATCH_SIZE = 16
+
+
+def _box_filter_2d(arr: np.ndarray, size: int) -> np.ndarray:
+    """Pure-NumPy 2D box filter using integral images (no scipy dependency)."""
+    h, w = arr.shape
+    pad = size // 2
+    padded = np.pad(arr, pad, mode="reflect")
+    integral = np.pad(np.cumsum(np.cumsum(padded, axis=0), axis=1), ((1, 0), (1, 0)))
+    y0, y1 = 0, h
+    x0, x1 = 0, w
+    res = (
+        integral[y1 + size, x1 + size]
+        - integral[y0, x1 + size]
+        - integral[y1 + size, x0]
+        + integral[y0, x0]
+    )
+    return res / (size * size)
 
 
 def load_model(model_path, device=None):
@@ -64,8 +83,8 @@ def load_model(model_path, device=None):
 def lee_filter(img, size=5):
     """Lee speckle filter."""
     img = img.astype(np.float32)
-    mean = uniform_filter(img, size)
-    sq_mean = uniform_filter(img ** 2, size)
+    mean = _box_filter_2d(img, size)
+    sq_mean = _box_filter_2d(img ** 2, size)
     var = np.maximum(sq_mean - mean ** 2, 0)
     w = var / (var + np.var(img) + 1e-12)
     return mean + w * (img - mean)
@@ -160,7 +179,7 @@ def predict_scene(
 
         xb = torch.from_numpy(batch).float().to(device)
 
-        # Standard Member 1 normalization: maps [0, 255] to [-1.0, 1.0]
+        # Standard U-Net normalization: maps [0, 255] to [-1.0, 1.0]
         xb = (xb / 255.0 - 0.5) / 0.5
 
         if use_amp:
@@ -280,19 +299,21 @@ def load_input(input_path, input_type="uint8"):
         # Try rasterio first if available
         if rasterio is not None:
             try:
-                with rasterio.open(input_path) as src:
-                    if src.count < 2:
-                        raise ValueError(
-                            "GeoTIFF must contain at least 2 bands: VV and VH."
-                        )
-                    arr = src.read([1, 2])
-                    profile = src.profile.copy()
-                    profile["crs"] = str(src.crs) if src.crs else None
-                    profile["transform"] = [
-                        src.transform.c, src.transform.a, src.transform.b,
-                        src.transform.f, src.transform.d, src.transform.e
-                    ]
-                    profile["tags"] = src.tags()
+                with warnings.catch_warnings():
+                    warnings.filterwarnings("ignore", category=getattr(rasterio.errors, "NotGeoreferencedWarning", UserWarning))
+                    with rasterio.open(input_path) as src:
+                        if src.count < 2:
+                            raise ValueError(
+                                "GeoTIFF must contain at least 2 bands: VV and VH."
+                            )
+                        arr = src.read([1, 2])
+                        profile = src.profile.copy()
+                        profile["crs"] = str(src.crs) if src.crs else None
+                        profile["transform"] = [
+                            src.transform.c, src.transform.a, src.transform.b,
+                            src.transform.f, src.transform.d, src.transform.e
+                        ]
+                        profile["tags"] = src.tags()
                 return prepare_sar(arr, input_type), profile
             except Exception:
                 pass
@@ -333,8 +354,10 @@ def save_mask(mask, output_path, profile=None):
         try:
             out_profile = profile.copy()
             out_profile.update(count=1, dtype="uint8", nodata=0)
-            with rasterio.open(output_path, "w", **out_profile) as dst:
-                dst.write(mask.astype(np.uint8), 1)
+            with warnings.catch_warnings():
+                warnings.filterwarnings("ignore", category=getattr(rasterio.errors, "NotGeoreferencedWarning", UserWarning))
+                with rasterio.open(output_path, "w", **out_profile) as dst:
+                    dst.write(mask.astype(np.uint8), 1)
             return
         except Exception:
             pass
@@ -372,7 +395,7 @@ def generate_prediction_panel(
     output_png_path: Path,
 ) -> Path:
     """
-    Generate Member 1 side-by-side visualization:
+    Generate side-by-side SAR visualization:
     - Panel 1: Sentinel-1 SAR VV Channel Amplitude
     - Panel 2: ResNet-34 U-Net Flood Inundation Mask Overlay
     """
@@ -431,7 +454,7 @@ def generate_prediction_panel(
     )
 
     plt.suptitle(
-        "AquaWatch — Member 1 SAR Flood Extent Segmentation (ResNet-34 U-Net)",
+        "AquaWatch — SAR Flood Extent Segmentation (ResNet-34 U-Net)",
         color="#38bdf8",
         fontsize=12,
         fontweight="bold",

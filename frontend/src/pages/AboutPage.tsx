@@ -23,11 +23,11 @@ export default function AboutPage() {
           </thead>
           <tbody>
             <tr>
-              <td>Member 1: ResNet-34 U-Net</td>
+              <td>ResNet-34 U-Net</td>
               <td>Dual-polarization (VV/VH) Sentinel-1 SAR surface water segmentation at 10m spatial resolution.</td>
             </tr>
             <tr>
-              <td>Member 2: FloodLSTM</td>
+              <td>FloodLSTM</td>
               <td>Multi-horizon (24h, 48h, 72h) river level forecasting using stacked 2-layer LSTM with 60 engineered features.</td>
             </tr>
             <tr>

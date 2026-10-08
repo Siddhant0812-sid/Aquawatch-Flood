@@ -1,7 +1,5 @@
 # AquaWatch — Flood Extent Mapping & Short-Term Flood Risk Forecasting
 
-> **⏰ DEADLINE OVERRIDE (2026-09-22): 1-WEEK DEMO.** The original 5-month / 14-phase plan in this document is **suspended**. Only Section 16.1 (1-week demo phases) and the demo Definition of Done (Section 21) are active. Member 3 (Full-Stack) owns all five days. Member 1 and Member 2 are deferred to a later phase and must not block delivery. Build against mock data per `BACKEND_SCHEMA.md` so real models can be swapped in later without frontend changes.
-
 ## 1. Project Overview
 
 ### Objective
@@ -962,7 +960,7 @@ Backend must provide:
 
 ## 16. Implementation Phases — 1-Week Demo Timeline
 
-> **Timeline override (2026-09-22):** The original 5-month / 14-phase plan below is **suspended**. This project must ship as a demo within **1 week**. Only the phases listed in Section 16.1 are in scope. All other phases (3, 5, 6, 11, 13, and the full testing/documentation suites) are **out of scope** for the demo and must not block delivery. Real-model integration (Member 1 / Member 2) happens later against the mock contracts built here — the mock response shapes must be preserved exactly so real data can be swapped in without frontend changes.
+> **Timeline override (2026-09-22):** The original 5-month / 14-phase plan below is **suspended**. This project must ship as a demo within **1 week**. Only the phases listed in Section 16.1 are in scope. All other phases (3, 5, 6, 11, 13, and the full testing/documentation suites) are **out of scope** for the demo and must not block delivery. Real-model integration (SAR Segmentation / Hydrological Forecasting) happens later against the mock contracts built here — the mock response shapes must be preserved exactly so real data can be swapped in without frontend changes.
 
 ### 16.1 In-Scope Demo Phases (1 week)
 
@@ -1008,8 +1006,8 @@ Backend must provide:
 
 ### 16.2 Out of Scope for the 1-Week Demo (do NOT attempt)
 - Phases 3 (file-based data layer), 5 (flood mapping integration), 6 (forecasting integration), 11 (full system integration beyond navigation)
-- Real Sentinel-1 / Earth Engine ingestion (Member 1)
-- Real LSTM / ARIMA / TFT models (Member 2)
+- Real Sentinel-1 / Earth Engine ingestion (SAR Segmentation Module)
+- Real LSTM / ARIMA / TFT models (Hydrological Forecasting Module)
 - Phase 12 full test suite, Phase 13 real-data migration, Phase 14 full documentation
 - Docker, database, cloud deployment
 
@@ -1019,13 +1017,13 @@ Backend must provide:
 
 > **Timeline override (2026-09-22):** The original 5-month timeline below is **suspended**. The active schedule is a **1-week demo delivery** starting 2026-09-22, with phases defined in Section 16.1.
 
-| Day | Focus | Owner |
+| Day | Focus | Role / Area |
 |---|---|---|
-| Day 1 | Backend foundation (`/health`) | Member 3 |
-| Day 2 | Mock data + core endpoints (`/stations`, `/segment`, `/forecast`, `/simulate-alert`) | Member 3 |
-| Day 3 | Frontend shell + Dashboard view | Member 3 |
-| Day 4 | Station Detail + About views | Member 3 |
-| Day 5 | Polish, smoke tests, walkthrough, handoff | Member 3 |
+| Day 1 | Backend foundation (`/health`) | Full-Stack / Platform |
+| Day 2 | Mock data + core endpoints (`/stations`, `/segment`, `/forecast`, `/simulate-alert`) | Full-Stack / Platform |
+| Day 3 | Frontend shell + Dashboard view | Full-Stack / Frontend |
+| Day 4 | Station Detail + About views | Full-Stack / Frontend |
+| Day 5 | Polish, smoke tests, walkthrough, handoff | Team Delivery |
 
 ### Original 5-Month Timeline (suspended, reference only)
 
@@ -1066,21 +1064,21 @@ Backend must provide:
 
 ## 19. Team Responsibility Mapping — 1-Week Demo
 
-> **Scope override (2026-09-22):** Responsibilities below are scoped to the **1-week demo** (Section 16.1). Real-model work (Member 1 / Member 2) is deferred to a later phase and must not block the demo; the mock contracts built by Member 3 are the interface that work will plug into later.
+> **Scope override (2026-09-22):** Responsibilities below are scoped to the **1-week demo** (Section 16.1). Model work integrates with mock contracts built by the platform service.
 
-### Member 3 — Full-Stack (primary owner of the 1-week demo)
+### Full-Stack Engineering (Platform & Dashboard)
 - Files: `backend/app/main.py`, `backend/app/api/routes/*`, `frontend/src/*`, `backend/app/services/mock_data_service.py`, `backend/app/services/alert_service.py`
 - Days: 1-5 (all five days)
 - Tasks: FastAPI backend + mock data + all 5 endpoints + full React/Leaflet UI (Dashboard, Station Detail, About) + smoke tests + demo walkthrough
 - Definition of Done: all user journeys in `UI_UX_DESIGN.md` Section 7 work locally against mock data
 
-### Member 1 — Remote Sensing / Computer Vision (deferred)
+### Remote Sensing & Computer Vision (SAR Segmentation)
 - Files: `backend/app/ml/segmentation_adapter.py`, `backend/app/services/flood_mapping_service.py`, `data/raw/satellite/*`, `data/outputs/flood_masks/*`
-- Status: **Out of scope for the 1-week demo.** Later phase. Will replace mock `/segment` responses with real Sentinel-1 segmentation outputs using the same response contract (`BACKEND_SCHEMA.md` Section 2.2) — no frontend changes required.
+- Status: Replaces mock `/segment` responses with real Sentinel-1 segmentation outputs using the same response contract (`BACKEND_SCHEMA.md` Section 2.2) — no frontend changes required.
 
-### Member 2 — Time-Series / ML (deferred)
+### Hydrological Time-Series & Deep Learning (Forecasting)
 - Files: `backend/app/ml/forecasting_adapter.py`, `backend/app/services/forecasting_service.py`, `data/raw/rainfall/*`, `data/raw/river_levels/*`, `data/processed/features/*`
-- Status: **Out of scope for the 1-week demo.** Later phase. Will replace mock `/forecast` responses with real ARIMA/LSTM/TFT predictions using the same response contract (`BACKEND_SCHEMA.md` Section 2.3) — no frontend changes required.
+- Status: Replaces mock `/forecast` responses with real ARIMA/LSTM/TFT predictions using the same response contract (`BACKEND_SCHEMA.md` Section 2.3) — no frontend changes required.
 
 ### Original Team Responsibility Mapping (5-month plan, suspended)
 
@@ -1122,7 +1120,7 @@ Backend must provide:
 - [ ] Backend starts and `GET /health` returns `{"status": "ok"}`
 - [ ] All 5 demo endpoints return valid mock responses per `BACKEND_SCHEMA.md`:
       `/stations`, `/segment?date=`, `/forecast?station_id=`, `/simulate-alert`, `/health`
-- [ ] Mock response shapes match `BACKEND_SCHEMA.md` exactly (so Member 1 / Member 2 can swap in real models later with no frontend changes)
+- [ ] Mock response shapes match `BACKEND_SCHEMA.md` exactly (so models can swap in real outputs later with no frontend changes)
 - [ ] Frontend runs and renders the Dashboard view (map + flood overlay + station markers + risk badges + date selector + imagery-age disclosure)
 - [ ] Station Detail view renders the 72h forecast chart with danger-level reference line, explainability panel, and Simulate Alert button
 - [ ] About view lists data sources and limitations
