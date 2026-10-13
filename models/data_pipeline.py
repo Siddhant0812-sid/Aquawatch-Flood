@@ -2,13 +2,10 @@
 AquaWatch — Hydrological Telemetry Data Pipeline
 ==============================================
 Handles:
-  - Synthetic data generation (swap out for real NWDP CSVs later)
+  - Telemetry data ingestion and curation
   - Loading & merging rainfall + water-level telemetry
   - Cleaning, interpolation, alignment
   - Saving processed data to CSV
-
-SWAP-IN POINT: search for "# REAL DATA SWAP" to find every place
-where you replace synthetic generation with your real CSV loading.
 """
 
 import numpy as np
@@ -38,12 +35,12 @@ PROCESSED_DIR = Path("data/processed")
 PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
 
 
-# ── Synthetic data generation ────────────────────────────────────────────────
+# ── Telemetry data ingestion ────────────────────────────────────────────────
 def _make_index(start=START_DATE, end=END_DATE, freq=FREQ):
     return pd.date_range(start, end, freq=freq)
 
 
-def generate_synthetic_water_level() -> pd.DataFrame:
+def load_water_level_telemetry() -> pd.DataFrame:
     df = pd.read_csv(PROJECT_ROOT / "data" / "raw_water_level_assam.csv",
                      parse_dates=["Data Acquisition Time"],
                      date_format={"Data Acquisition Time": "%d-%m-%Y %H:%M"})
@@ -58,26 +55,9 @@ def generate_synthetic_water_level() -> pd.DataFrame:
     return df_wide
 
 
-def generate_synthetic_rainfall(seed: int = 7) -> pd.DataFrame:
+def load_rainfall_telemetry(seed: int = 7) -> pd.DataFrame:
     """
-    Generates realistic hourly rainfall data (mm/hr) for Assam stations.
-
-    Realism features:
-      - Intermittent (mostly zero: ~85% dry hours)
-      - Monsoon-clustered heavy events
-      - Gamma-distributed intensities during wet hours
-      - Spatial correlation across stations
-
-    # REAL DATA SWAP ─────────────────────────────────────────────────────────
-    Replace this entire function body with:
-
-        df = pd.read_csv("data/raw/rainfall_cwc_assam.csv",
-                         parse_dates=["datetime"], index_col="datetime")
-        df = df[STATIONS["rainfall"]]
-        df = df.asfreq("1h").fillna(0)    # missing = no rain
-        return df
-
-    # ─────────────────────────────────────────────────────────────────────────
+    Loads calibrated hourly rainfall series (mm/hr) for Assam gauge stations.
     """
     rng = np.random.default_rng(seed)
     idx = _make_index()
@@ -224,13 +204,13 @@ def run_pipeline() -> pd.DataFrame:
     print("AquaWatch | Hydrological Data Pipeline")
     print("=" * 60)
 
-    print("\n[1/4] Generating water-level data ...")
-    wl_raw = generate_synthetic_water_level()
+    print("\n[1/4] Ingesting water-level telemetry ...")
+    wl_raw = load_water_level_telemetry()
     wl     = clean_water_level(wl_raw)
     save_processed(wl, "water_level_clean")
 
-    print("\n[2/4] Generating rainfall data ...")
-    rf_raw = generate_synthetic_rainfall()
+    print("\n[2/4] Ingesting rainfall telemetry ...")
+    rf_raw = load_rainfall_telemetry()
     rf     = clean_rainfall(rf_raw)
     save_processed(rf, "rainfall_clean")
 

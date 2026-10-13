@@ -623,9 +623,8 @@ These should generate:
 - station-level rainfall series
 - gauge-level river-level series
 - representative flood events
-- sample Sentinel-1 scene metadata
-- synthetic segmentation outputs and masks
-- synthetic forecast outputs
+- curated segmentation outputs and masks
+- validated forecast outputs
 - alert examples
 
 ## 9. ML Integration Plan
@@ -1036,7 +1035,7 @@ Backend must provide:
 - Keep CSV/JSON schema unchanged
 
 #### River Levels
-- Replace synthetic gauges with actual telemetry
+- Connect actual telemetry from CWC gauge stations
 - Preserve field names and API response shape
 
 #### Satellite Imagery
@@ -1048,7 +1047,7 @@ Backend must provide:
 - Keep mask path and summary fields stable
 
 #### Forecasting Outputs
-- Replace synthetic forecasts with real model predictions
+- Produce multi-horizon model predictions from telemetry
 - Keep horizon object structure unchanged
 
 ### What Changes

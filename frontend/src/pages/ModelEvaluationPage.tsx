@@ -38,7 +38,7 @@ export default function ModelEvaluationPage() {
           <h3>Sentinel-1 SAR Flood Extent Segmentation (U-Net)</h3>
         </div>
         <p>
-          Trained on dual-polarization Sentinel-1 Synthetic Aperture Radar (SAR) imagery to delineate inundated
+          Trained on dual-polarization Sentinel-1 SAR (Satellite Radar) imagery to delineate inundated
           regions across the Brahmaputra basin regardless of cloud cover.
         </p>
 

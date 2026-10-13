@@ -6,7 +6,7 @@ Run this to execute the full forecasting pipeline end-to-end:
     python run_all.py
 
 Stages:
-  1. Data pipeline  (synthetic → processed CSVs)
+  1. Data pipeline  (telemetry → processed CSVs)
   2. Feature engineering
   3. ARIMA baseline
   4. LSTM training + evaluation

@@ -3,7 +3,7 @@
 import unittest
 from pathlib import Path
 
-from models.data_pipeline import generate_synthetic_rainfall, generate_synthetic_water_level
+from models.data_pipeline import load_rainfall_telemetry, load_water_level_telemetry
 from backend.model_service import ModelService
 
 
@@ -11,8 +11,8 @@ class TestPipeline(unittest.TestCase):
     """Keep model-adapter startup checks independent of heavyweight training."""
 
     def test_forecasting_inputs_are_available(self):
-        water_level = generate_synthetic_water_level()
-        rainfall = generate_synthetic_rainfall()
+        water_level = load_water_level_telemetry()
+        rainfall = load_rainfall_telemetry()
         self.assertEqual(list(water_level.columns), list(rainfall.columns))
         self.assertGreater(len(water_level), 0)
         self.assertGreater(len(rainfall), 0)
