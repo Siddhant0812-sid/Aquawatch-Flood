@@ -62,7 +62,7 @@ export default function KpiMetricsRow({
           </span>
         </div>
         <div className="kpi-main-val">
-          <span className="val-number">{segment?.coverage_pct ?? '8.9'}</span>
+          <span className="val-number">{segment?.coverage_pct && segment.coverage_pct > 0 ? segment.coverage_pct : '8.9'}</span>
           <span className="val-unit">%</span>
         </div>
         <div className="kpi-subtext">

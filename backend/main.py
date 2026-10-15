@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 from datetime import datetime
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -21,6 +21,7 @@ USE_MOCK_DATA = os.getenv("USE_MOCK_DATA", "False").lower() in ("true", "1", "ye
 USE_MOCK_MODELS = os.getenv("USE_MOCK_MODELS", "False").lower() in ("true", "1", "yes")
 
 app = FastAPI(title="AquaWatch Flood API")
+api_router = APIRouter()
 
 app.add_middleware(
     CORSMiddleware,
@@ -60,12 +61,12 @@ async def http_exception_handler(_, exc: HTTPException):
     return JSONResponse(status_code=exc.status_code, content={"error": error, "detail": message})
 
 
-@app.get("/health")
+@api_router.get("/health")
 def health():
     return {"status": "ok"}
 
 
-@app.get("/stations")
+@api_router.get("/stations")
 def get_stations():
     stations_out = []
     for station in STATIONS:
@@ -83,7 +84,7 @@ def get_stations():
     return {"stations": stations_out}
 
 
-@app.get("/segment")
+@api_router.get("/segment")
 def get_segment(date: str):
     try:
         dt = datetime.strptime(date, "%Y-%m-%d")
@@ -107,7 +108,7 @@ def get_segment(date: str):
         ) from exc
 
 
-@app.get("/forecast")
+@api_router.get("/forecast")
 def get_forecast(station_id: str):
     station = next((item for item in STATIONS if item["station_id"] == station_id), None)
     if not station:
@@ -135,7 +136,7 @@ class AlertRequest(BaseModel):
     risk_score: float
 
 
-@app.post("/simulate-alert")
+@api_router.post("/simulate-alert")
 def simulate_alert(req: AlertRequest):
     station = next((item for item in STATIONS if item["station_id"] == req.station_id), None)
     if not station:
@@ -161,7 +162,7 @@ def simulate_alert(req: AlertRequest):
     return {"triggered": triggered, "message": message}
 
 
-@app.get("/evaluation-summary")
+@api_router.get("/evaluation-summary")
 def get_evaluation_summary():
     comparison_file = PROJECT_ROOT / "outputs" / "explainability" / "model_comparison.csv"
     metrics = []
@@ -200,6 +201,11 @@ def get_evaluation_summary():
             "backtest_plot": "/outputs/explainability/backtest_NH15 Crossing Dhansirighat_2022.png",
         }
     }
+
+
+# Mount API router both at /api and at root for full backwards compatibility
+app.include_router(api_router, prefix="/api")
+app.include_router(api_router)
 
 
 # Static mount for prediction images

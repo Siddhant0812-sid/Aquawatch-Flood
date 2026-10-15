@@ -177,7 +177,7 @@ export default function SarShowcasePanel({
         </div>
         <div className="spec-badge-box">
           <span className="spec-label">SAR Inundated Extent</span>
-          <span className="spec-val text-cyan">{segment?.coverage_pct ?? '8.9'}% of Basin</span>
+          <span className="spec-val text-cyan">{segment?.coverage_pct && segment.coverage_pct > 0 ? segment.coverage_pct : '8.9'}% of Basin</span>
         </div>
       </div>
     </section>

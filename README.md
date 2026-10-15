@@ -14,38 +14,38 @@ AquaWatch is an integrated local application for flood awareness and emergency m
 ## 1. Project Structure
 
 ```text
-AquaWatch Flood/
+AquaWatch/
 ├── backend/
-│   ├── main.py                  # FastAPI server, endpoints, and static mounts
-│   ├── model_service.py         # Model integration (lazy cache, U-Net TTA, LSTM)
-│   ├── requirements.txt         # Backend Python dependencies
-│   └── tests/test_api.py        # Focused unit and integration tests
-├── data/
-│   ├── assam_sample.tif         # Georeferenced 2-band Sentinel-1 SAR GeoTIFF (VV/VH)
-│   ├── sar_sample.npy           # Dual-pol SAR numpy array fallback
-│   ├── raw_rainfall_cwc_assam.csv
-│   ├── raw_water_level_assam.csv
-│   └── processed/               # Cleaned hourly features for forecasting
-├── frontend/
+│   ├── main.py                  # FastAPI Server (Endpoints: /health, /stations, /segment, /forecast, /simulate-alert)
+│   ├── model_service.py         # In-Memory Model Cache & Leaflet GeoJSON Vectorizer
+│   └── tests/
+│       └── test_api.py          # API Endpoint & Integration Test Suite
+│
+├── models/                      # Deep Learning & ML Engines
+│   ├── inference.py             # Sentinel-1 SAR U-Net Inference Engine (TTA & Sliding Window)
+│   ├── model_lstm.py            # Multi-Horizon Hydrological Forecasting Engine (24h/48h/72h)
+│   ├── feature_engineering.py   # Hydrological Lag & Cumulative Rainfall Transformers
+│   ├── explainability.py        # Temporal Attention Maps & Monsoon Backtest Generator
+│   ├── unet_resnet34_best.pt    # Serialized U-Net Flood Extent Checkpoint (~98 MB)
+│   ├── lstm_best.pt             # Serialized Stacked LSTM Forecaster Checkpoint
+│   └── scaler_params.npy        # Standardized Feature Normalization Scalers
+│
+├── frontend/                    # React + Leaflet Command Center Dashboard
 │   ├── src/
-│   │   ├── App.tsx              # Application shell and route configuration
-│   │   ├── api/client.ts        # Typed API client and response interfaces
-│   │   └── pages/
-│   │       ├── DashboardPage.tsx       # Live map, stations, and U-Net output panel
-│   │       ├── ModelEvaluationPage.tsx # Benchmark metrics and explainability plots
-│   │       ├── StationDetailPage.tsx   # 72h forecast chart and alert simulation
-│   │       └── AboutPage.tsx           # Technical architecture and data sources
-│   ├── package.json
-│   └── vite.config.ts           # Development server with /api, /outputs, /predictions proxy
-├── models/
-│   ├── inference.py             # U-Net sliding window, TTA, and panel generator
-│   ├── unet_resnet34_best.pt    # Trained U-Net checkpoint (~98 MB)
-│   ├── model_lstm.py            # PyTorch LSTM forecasting architecture
-│   ├── lstm_best.pt             # Trained multi-horizon LSTM checkpoint
-│   └── x_scaler_params.npy      # Feature normalization metadata
-├── outputs/
-│   └── explainability/          # Model comparison CSV, attention and backtest plots
-└── test_pipeline.py             # Verification script for models and pipeline
+│   │   ├── components/          # Modular UI Panels (Basin Map, 72h Chart, KPI Row, SAR Showcase)
+│   │   ├── pages/               # Main Views (Dashboard, Station Detail, Evaluation, About)
+│   │   └── api/client.ts        # Typed API Connector
+│   └── package.json             # Frontend Toolchain & Scripts
+│
+├── data/                        # Curated Telemetry & Geospatial Assets
+│   ├── assam_sample.tif         # Dual-Pol Sentinel-1 SAR Satellite Scene (10m VV/VH)
+│   └── processed/               # CWC Water Level Telemetry & IMD Rainfall Series
+│
+├── outputs/                     # Benchmark Metrics, Comparison Curves & Backtests
+│   └── explainability/          # Model Comparison, Attention Heatmaps, Backtest Plots
+│
+├── run_all.py                   # Master Pipeline Runner (Data Prep → Training → Evaluation)
+└── requirements.txt             # Python Dependencies
 ```
 
 ---
@@ -100,7 +100,7 @@ To run the application, open two separate terminals from the project root:
 
 2. **Install backend dependencies**:
    ```powershell
-   pip install -r backend/requirements.txt
+   pip install -r requirements.txt
    ```
 
 3. **Verify the models and pipeline (Optional but recommended)**:
